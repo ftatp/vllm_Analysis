@@ -552,7 +552,7 @@ class LlamaForCausalLM(nn.Module, SupportsLoRA, SupportsPP):
     ) -> Union[torch.Tensor, IntermediateTensors]:
         model_output = self.model(input_ids, positions, kv_caches,
                                   attn_metadata, intermediate_tensors,
-                                  inputs_embeds)
+                                  inputs_embeds) # Prefill
         return model_output
 
     def compute_logits(

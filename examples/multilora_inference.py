@@ -12,6 +12,7 @@ from huggingface_hub import snapshot_download
 from vllm import EngineArgs, LLMEngine, RequestOutput, SamplingParams
 from vllm.lora.request import LoRARequest
 
+import torch
 
 def create_test_prompts(
         lora_path: str
@@ -25,16 +26,16 @@ def create_test_prompts(
     first adapter have finished.
     """
     return [
-        ("A robot may not injure a human being",
-         SamplingParams(temperature=0.0,
-                        logprobs=1,
-                        prompt_logprobs=1,
-                        max_tokens=128), None),
-        ("To be or not to be,",
-         SamplingParams(temperature=0.8,
-                        top_k=5,
-                        presence_penalty=0.2,
-                        max_tokens=128), None),
+        # ("A robot may not injure a human being",
+        #  SamplingParams(temperature=0.0,
+        #                 logprobs=1,
+        #                 prompt_logprobs=1,
+        #                 max_tokens=128), None),
+        # ("To be or not to be,",
+        #  SamplingParams(temperature=0.8,
+        #                 top_k=5,
+        #                 presence_penalty=0.2,
+        #                 max_tokens=128), None),
         (
             "[user] Write a SQL query to answer the question based on the table schema.\n\n context: CREATE TABLE table_name_74 (icao VARCHAR, airport VARCHAR)\n\n question: Name the ICAO for lilongwe international airport [/user] [assistant]",  # noqa: E501
             SamplingParams(temperature=0.0,
@@ -44,7 +45,7 @@ def create_test_prompts(
                            stop_token_ids=[32003]),
             LoRARequest("sql-lora", 1, lora_path)),
         (
-            "[user] Write a SQL query to answer the question based on the table schema.\n\n context: CREATE TABLE table_name_74 (icao VARCHAR, airport VARCHAR)\n\n question: Name the ICAO for lilongwe international airport [/user] [assistant]",  # noqa: E501
+            "[user] Write a SQL query to answer the question based on the table schema.\n\n context: CREATE TABLE table_name_74 (icao VARCHAR, airport VARCHAR)\n\n question: Name the ICAO for lilongwe airport [/user] [assistant]",  # noqa: E501
             SamplingParams(temperature=0.0,
                            logprobs=1,
                            prompt_logprobs=1,
@@ -61,6 +62,7 @@ def process_requests(engine: LLMEngine,
     request_id = 0
 
     while test_prompts or engine.has_unfinished_requests():
+ 
         if test_prompts:
             prompt, sampling_params, lora_request = test_prompts.pop(0)
             engine.add_request(str(request_id),
@@ -69,11 +71,19 @@ def process_requests(engine: LLMEngine,
                                lora_request=lora_request)
             request_id += 1
 
+    #while engine.has_unfinished_requests():
         request_outputs: List[RequestOutput] = engine.step()
 
+        torch.cuda.nvtx.range_push("????????????????")
+        print("????????????????????")
+        torch.cuda.nvtx.range_pop()
         for request_output in request_outputs:
             if request_output.finished:
+                torch.cuda.nvtx.range_push("Finished")
+                print("Finished:: =========================================")
                 print(request_output)
+                print("====================================================\n")
+                torch.cuda.nvtx.range_pop()
 
 
 def initialize_engine() -> LLMEngine:
@@ -87,10 +97,11 @@ def initialize_engine() -> LLMEngine:
     # max_cpu_loras: controls the size of the CPU LoRA cache.
     engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
                              enable_lora=True,
-                             max_loras=1,
+                             max_loras=2,
                              max_lora_rank=8,
                              max_cpu_loras=2,
-                             max_num_seqs=256)
+                             max_num_seqs=256,
+                             gpu_memory_utilization=0.8)
     return LLMEngine.from_engine_args(engine_args)
 
 
