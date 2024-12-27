@@ -107,7 +107,10 @@ def initialize_engine() -> LLMEngine:
 
 def main():
     """Main function that sets up and runs the prompt processing."""
+    torch.cuda.nvtx.range_push("Initializing engine")
     engine = initialize_engine()
+    torch.cuda.nvtx.range_pop()
+    
     lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
     test_prompts = create_test_prompts(lora_path)
     process_requests(engine, test_prompts)

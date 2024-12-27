@@ -372,6 +372,9 @@ class PunicaWrapper:
         #No LoRA request, so return directly
         if self.no_lora:
             return
+        
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_push("prefill shrink lora")
         sgmv_shrink(
             x,
             w_t_all,
@@ -379,6 +382,8 @@ class PunicaWrapper:
             *self.prefill_metadata,
             scale,
         )
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_pop()
 
     def shrink_decode(
         self,
@@ -387,7 +392,11 @@ class PunicaWrapper:
         w_t_all: torch.Tensor,
         scale: float,
     ):
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_push("decode shrink lora")
         bgmv_shrink(x, w_t_all, y, self.token_lora_indices, scale)
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_pop()
 
     def expand_prefill(
         self,
@@ -399,6 +408,9 @@ class PunicaWrapper:
         #No LoRA request, so return directly
         if self.no_lora:
             return
+        
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_push("prefill expand lora")
         sgmv_expand(
             x,
             w_t_all,
@@ -406,6 +418,8 @@ class PunicaWrapper:
             *self.prefill_metadata,
             add_input,
         )
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_pop()
 
     def expand_decode(
         self,
@@ -414,7 +428,11 @@ class PunicaWrapper:
         w_t_all: torch.Tensor,
         add_input: bool,
     ):
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_push("decode expand lora")
         bgmv_expand(x, w_t_all, y, self.token_lora_indices, add_input)
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_pop()
 
     def expand_slice_prefill(
         self,
@@ -428,6 +446,8 @@ class PunicaWrapper:
         #No LoRA request, so return directly
         if self.no_lora:
             return
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_push("prefill expand lora")
         sgmv_expand_slice(
             x,
             w_t_all,
@@ -437,6 +457,9 @@ class PunicaWrapper:
             y_slice_size,
             add_input,
         )
+        
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_pop()
 
     def expand_slice_decode(
         self,
@@ -447,8 +470,12 @@ class PunicaWrapper:
         y_slice_size: Optional[int],
         add_input: bool,
     ):
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_push("decode expand lora")
         bgmv_expand_slice(x, w_t_all, y, self.token_lora_indices, y_offset,
                           y_slice_size, add_input)
+        if x.shape[0] != 4096:
+            torch.cuda.nvtx.range_pop()
 
     def add_shrink(
         self,

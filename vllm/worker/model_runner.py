@@ -1606,7 +1606,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         intermediate_tensors: Optional[IntermediateTensors] = None,
         num_steps: int = 1,
     ) -> Optional[Union[List[SamplerOutput], IntermediateTensors]]:
-        if num_steps > 1:
+        if num_steps > 1: # Prefill + Decode 코드
             raise ValueError("num_steps > 1 is not supported in ModelRunner")
 
         if self.lora_config:
@@ -1846,6 +1846,8 @@ class CUDAGraphRunner(nn.Module):
         # KV caches are fixed tensors, so we don't need to copy them.
         del kv_caches
 
+
+        torch.cuda.nvtx.range_push("model runner")
         # Copy the input tensors to the input buffers.
         self.input_buffers["input_ids"].copy_(input_ids, non_blocking=True)
         self.input_buffers["positions"].copy_(positions, non_blocking=True)
@@ -1876,6 +1878,7 @@ class CUDAGraphRunner(nn.Module):
             self.input_buffers["encoder_positions"].copy_(
                 kwargs['encoder_positions'], non_blocking=True)
 
+        torch.cuda.nvtx.range_pop()
         # Run the graph.
         self.graph.replay()
         # Return the output tensor.
