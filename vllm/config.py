@@ -1100,6 +1100,7 @@ class SchedulerConfig:
                  multi_step_stream_outputs: bool = False,
                  send_delta_data: bool = False,
                  policy: str = "fcfs") -> None:
+        pumping = 8
         if max_num_batched_tokens is None:
             if enable_chunked_prefill:
                 if num_scheduler_steps > 1:
@@ -1115,7 +1116,7 @@ class SchedulerConfig:
             else:
                 # If max_model_len is too short, use 2048 as the default value
                 # for higher throughput.
-                max_num_batched_tokens = max(max_model_len, 2048)
+                max_num_batched_tokens = max(max_model_len, 2048) * pumping
 
             if task == "embedding":
                 # For embedding, choose specific value for higher throughput
@@ -1139,7 +1140,7 @@ class SchedulerConfig:
 
         self.task: Final = task
         self.max_num_seqs = max_num_seqs
-        self.max_model_len = max_model_len
+        self.max_model_len = max_model_len / pumping
         self.num_lookahead_slots = num_lookahead_slots
         self.delay_factor = delay_factor
         self.chunked_prefill_enabled = enable_chunked_prefill

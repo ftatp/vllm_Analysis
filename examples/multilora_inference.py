@@ -13,6 +13,7 @@ from vllm import EngineArgs, LLMEngine, RequestOutput, SamplingParams
 from vllm.lora.request import LoRARequest
 
 import torch
+import time
 
 def create_test_prompts(
         lora_path: str
@@ -43,7 +44,9 @@ def create_test_prompts(
                            prompt_logprobs=1,
                            max_tokens=128,
                            stop_token_ids=[32003]),
-            LoRARequest("sql-lora", 1, lora_path)),
+            #None
+            LoRARequest("sql-lora", 1, lora_path)
+        ),
         (
             "[user] Write a SQL query to answer the question based on the table schema.\n\n context: CREATE TABLE table_name_74 (icao VARCHAR, airport VARCHAR)\n\n question: Name the ICAO for lilongwe airport [/user] [assistant]",  # noqa: E501
             SamplingParams(temperature=0.0,
@@ -51,8 +54,39 @@ def create_test_prompts(
                            prompt_logprobs=1,
                            max_tokens=128,
                            stop_token_ids=[32003]),
-            LoRARequest("sql-lora2", 2, lora_path)),
+            #None
+            LoRARequest("sql-lora2", 2, lora_path)
+        ),
     ]
+    
+def create_dummy_test_prompts(
+    number_of_requests : int,
+    lora_path: str,
+) -> List[Tuple[str, SamplingParams, Optional[LoRARequest]]]:
+    requests = []
+    
+    prompt_len = 128 - 1
+    prompt = "Hi" + (prompt_len - 1) * " Hi"
+    sample_parms = SamplingParams(temperature=0.0,
+                           logprobs=1,
+                           prompt_logprobs=1,
+                           max_tokens=128,
+                           stop_token_ids=[32003])
+    
+    if lora_path == "":
+        using_loras = [None] * number_of_requests
+    else:   
+        using_lora_num = 1 # number_of_requests
+        lora_per_used = (number_of_requests / using_lora_num)
+        
+        using_lora_ids = [int(i / lora_per_used) for i in range(number_of_requests)]
+        using_loras = [LoRARequest(f"sql-lora {i+1}", i+1, lora_path) for i in using_lora_ids]
+        
+    for i in range(number_of_requests):
+        request = (prompt, sample_parms, using_loras[i])
+        requests.append(request)
+        
+    return requests
 
 
 def process_requests(engine: LLMEngine,
@@ -61,8 +95,8 @@ def process_requests(engine: LLMEngine,
     """Continuously process a list of prompts and handle the outputs."""
     request_id = 0
 
-    while test_prompts or engine.has_unfinished_requests():
- 
+    #while test_prompts or engine.has_unfinished_requests():
+    while test_prompts:
         if test_prompts:
             prompt, sampling_params, lora_request = test_prompts.pop(0)
             engine.add_request(str(request_id),
@@ -71,20 +105,18 @@ def process_requests(engine: LLMEngine,
                                lora_request=lora_request)
             request_id += 1
 
-    #while engine.has_unfinished_requests():
+    while engine.has_unfinished_requests():
+        torch.cuda.nvtx.range_push("Step")
         request_outputs: List[RequestOutput] = engine.step()
-
-        torch.cuda.nvtx.range_push("????????????????")
-        print("????????????????????")
         torch.cuda.nvtx.range_pop()
+
+        #print("????????????????????")
         for request_output in request_outputs:
             if request_output.finished:
-                torch.cuda.nvtx.range_push("Finished")
                 print("Finished:: =========================================")
-                print(request_output)
+                #print(request_output)
                 print("====================================================\n")
-                torch.cuda.nvtx.range_pop()
-
+        
 
 def initialize_engine() -> LLMEngine:
     """Initialize the LLMEngine."""
@@ -96,23 +128,29 @@ def initialize_engine() -> LLMEngine:
     #   use the same rank, it is recommended to set this as low as possible.
     # max_cpu_loras: controls the size of the CPU LoRA cache.
     engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
-                             enable_lora=True,
+                             enable_lora=False,
                              max_loras=2,
                              max_lora_rank=8,
                              max_cpu_loras=2,
                              max_num_seqs=256,
-                             gpu_memory_utilization=0.8)
+                             gpu_memory_utilization=0.85,
+                             #enforce_eager=True
+    )
     return LLMEngine.from_engine_args(engine_args)
 
 
 def main():
     """Main function that sets up and runs the prompt processing."""
-    torch.cuda.nvtx.range_push("Initializing engine")
+    #torch.cuda.nvtx.range_push("Initializing engine")
     engine = initialize_engine()
-    torch.cuda.nvtx.range_pop()
+    #torch.cuda.nvtx.range_pop()
+    # print("\nSleeping...")
+    # time.sleep(60)
     
     lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
-    test_prompts = create_test_prompts(lora_path)
+    #test_prompts = create_test_prompts(lora_path)
+    test_prompts = create_dummy_test_prompts(1, "")
+    #test_prompts = create_dummy_test_prompts(1, lora_path)
     process_requests(engine, test_prompts)
 
 
