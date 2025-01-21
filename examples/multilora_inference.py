@@ -105,15 +105,21 @@ def process_requests(engine: LLMEngine,
                                lora_request=lora_request)
             request_id += 1
 
+    step = 0
     while engine.has_unfinished_requests():
         torch.cuda.nvtx.range_push("Step")
         request_outputs: List[RequestOutput] = engine.step()
         torch.cuda.nvtx.range_pop()
-
-        #print("????????????????????")
-        for request_output in request_outputs:
+        
+        step += 1
+        print(f"Step {step}")
+        if step > 10:
+            print(f"Exited :: ======================================")
+            break
+        
+        for i, request_output in enumerate(request_outputs):
             if request_output.finished:
-                print("Finished:: =========================================")
+                print(f"Finished {i}:: ======================================")
                 #print(request_output)
                 print("====================================================\n")
         
@@ -149,10 +155,13 @@ def main():
     
     lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
     #test_prompts = create_test_prompts(lora_path)
-    test_prompts = create_dummy_test_prompts(1, "")
-    #test_prompts = create_dummy_test_prompts(1, lora_path)
+    
+    batch_size = 2
+    test_prompts = create_dummy_test_prompts(batch_size, "")
+    #test_prompts = create_dummy_test_prompts(batch_size, lora_path)
+    
     process_requests(engine, test_prompts)
-
+    print(batch_size)
 
 if __name__ == '__main__':
     main()

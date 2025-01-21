@@ -1108,9 +1108,9 @@ class MergedQKVParallelLinearWithLora(ColumnParallelLinearWithLoRA):
 
     def apply(self, x: torch.Tensor,
               bias: Optional[torch.Tensor]) -> torch.Tensor:
-        #torch.cuda.nvtx.range_push("Base QKV")
+        torch.cuda.nvtx.range_push("Base QKV")
         output = self.base_layer.quant_method.apply(self.base_layer, x, bias) # Prefill 코드
-        #torch.cuda.nvtx.range_pop()
+        torch.cuda.nvtx.range_pop()
         if self.bias_stacked is not None:
             self.indices = self.punica_wrapper.token_lora_indices
             output = apply_bias_packed_nslice(

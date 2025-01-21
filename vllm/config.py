@@ -1140,7 +1140,7 @@ class SchedulerConfig:
 
         self.task: Final = task
         self.max_num_seqs = max_num_seqs
-        self.max_model_len = max_model_len / pumping
+        self.max_model_len = max_model_len
         self.num_lookahead_slots = num_lookahead_slots
         self.delay_factor = delay_factor
         self.chunked_prefill_enabled = enable_chunked_prefill

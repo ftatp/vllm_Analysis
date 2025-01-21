@@ -990,6 +990,8 @@ def get_logprobs(
                 largest_num_logprobs = max(largest_num_logprobs,
                                            sampling_params.logprobs)
 
+        if len(next_token_ids) != len(query_indices):
+            pass
         assert len(next_token_ids) == len(query_indices)
 
     if len(query_indices) == 0:
