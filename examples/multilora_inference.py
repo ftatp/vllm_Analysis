@@ -12,6 +12,8 @@ from huggingface_hub import snapshot_download
 from vllm import EngineArgs, LLMEngine, RequestOutput, SamplingParams
 from vllm.lora.request import LoRARequest
 
+from vllm.stream_pool_manager import StreamPoolManager
+
 import torch
 import time
 
@@ -65,7 +67,7 @@ def create_dummy_test_prompts(
 ) -> List[Tuple[str, SamplingParams, Optional[LoRARequest]]]:
     requests = []
     
-    prompt_len = 128 - 1
+    prompt_len = 512 - 1
     prompt = "Hi" + (prompt_len - 1) * " Hi"
     sample_parms = SamplingParams(temperature=0.0,
                            logprobs=1,
@@ -121,7 +123,6 @@ def process_requests(engine: LLMEngine,
             if request_output.finished:
                 print(f"Finished {i}:: ======================================")
                 #print(request_output)
-                print("====================================================\n")
         
 
 def initialize_engine() -> LLMEngine:
@@ -133,13 +134,16 @@ def initialize_engine() -> LLMEngine:
     #   numbers will cause higher memory usage. If you know that all LoRAs will
     #   use the same rank, it is recommended to set this as low as possible.
     # max_cpu_loras: controls the size of the CPU LoRA cache.
+    enable_lora=False
+    if enable_lora == True:
+        StreamPoolManager.instance()
     engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
-                             enable_lora=False,
+                             enable_lora=enable_lora,
                              max_loras=2,
                              max_lora_rank=8,
                              max_cpu_loras=2,
                              max_num_seqs=256,
-                             gpu_memory_utilization=0.85,
+                             gpu_memory_utilization=0.7,
                              #enforce_eager=True
     )
     return LLMEngine.from_engine_args(engine_args)
