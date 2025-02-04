@@ -63,12 +63,13 @@ def create_test_prompts(
     
 def create_dummy_test_prompts(
     number_of_requests : int,
+    prompt_len : int,
     lora_path: str,
 ) -> List[Tuple[str, SamplingParams, Optional[LoRARequest]]]:
     requests = []
     
-    prompt_len = 512 - 1
-    prompt = "Hi" + (prompt_len - 1) * " Hi"
+    embedded_prompt_len = prompt_len - 1
+    prompt = "Hi" + (embedded_prompt_len - 1) * " Hi"
     sample_parms = SamplingParams(temperature=0.0,
                            logprobs=1,
                            prompt_logprobs=1,
@@ -96,8 +97,8 @@ def process_requests(engine: LLMEngine,
                                               Optional[LoRARequest]]]):
     """Continuously process a list of prompts and handle the outputs."""
     request_id = 0
-
-    #while test_prompts or engine.has_unfinished_requests():
+    loop = 0
+    # while test_prompts or engine.has_unfinished_requests():
     while test_prompts:
         if test_prompts:
             prompt, sampling_params, lora_request = test_prompts.pop(0)
@@ -112,12 +113,15 @@ def process_requests(engine: LLMEngine,
         torch.cuda.nvtx.range_push("Step")
         request_outputs: List[RequestOutput] = engine.step()
         torch.cuda.nvtx.range_pop()
-        
-        step += 1
-        print(f"Step {step}")
-        if step > 10:
-            print(f"Exited :: ======================================")
-            break
+        if request_outputs == None:
+            return
+        loop += 1
+        print(loop)
+        # step += 1
+        # print(f"Step {step}")
+        # if step > 10:
+        #     print(f"Exited :: ======================================")
+        #     break
         
         for i, request_output in enumerate(request_outputs):
             if request_output.finished:
@@ -125,7 +129,7 @@ def process_requests(engine: LLMEngine,
                 #print(request_output)
         
 
-def initialize_engine() -> LLMEngine:
+def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
     """Initialize the LLMEngine."""
     # max_loras: controls the number of LoRAs that can be used in the same
     #   batch. Larger numbers will cause higher memory usage, as each LoRA
@@ -134,16 +138,20 @@ def initialize_engine() -> LLMEngine:
     #   numbers will cause higher memory usage. If you know that all LoRAs will
     #   use the same rank, it is recommended to set this as low as possible.
     # max_cpu_loras: controls the size of the CPU LoRA cache.
-    enable_lora=False
-    if enable_lora == True:
-        StreamPoolManager.instance()
-    engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
+    enable_lora=True
+    # if enable_lora == True:
+    #     StreamPoolManager.instance()
+    engine_args = EngineArgs(#model="meta-llama/Llama-2-7b-hf",
+                             model="meta-llama/Llama-3.1-8B",
                              enable_lora=enable_lora,
                              max_loras=2,
                              max_lora_rank=8,
                              max_cpu_loras=2,
-                             max_num_seqs=256,
-                             gpu_memory_utilization=0.7,
+                             max_num_seqs=batch_size,
+                             max_model_len=prompt_len + 10,
+                             max_num_batched_tokens=batch_size * prompt_len,
+                             gpu_memory_utilization=0.65,
+                             enable_chunked_prefill=False,
                              #enforce_eager=True
     )
     return LLMEngine.from_engine_args(engine_args)
@@ -151,18 +159,22 @@ def initialize_engine() -> LLMEngine:
 
 def main():
     """Main function that sets up and runs the prompt processing."""
+    batch_size = 32
+    prompt_len = 128
+
     #torch.cuda.nvtx.range_push("Initializing engine")
-    engine = initialize_engine()
+    engine = initialize_engine(batch_size, prompt_len)
     #torch.cuda.nvtx.range_pop()
     # print("\nSleeping...")
     # time.sleep(60)
     
-    lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
+    #lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
+    lora_path = snapshot_download(repo_id="RikiyaT/Meta-Llama-3.1-8B-LoRA-test")
     #test_prompts = create_test_prompts(lora_path)
     
-    batch_size = 2
-    test_prompts = create_dummy_test_prompts(batch_size, "")
-    #test_prompts = create_dummy_test_prompts(batch_size, lora_path)
+
+    #test_prompts = create_dummy_test_prompts(batch_size, "")
+    test_prompts = create_dummy_test_prompts(batch_size, prompt_len, lora_path)
     
     process_requests(engine, test_prompts)
     print(batch_size)

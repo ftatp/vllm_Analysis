@@ -476,7 +476,8 @@ class LLMEngine:
             ))
 
         self.seq_id_to_seq_group: Dict[str, SequenceGroupBase] = {}
-
+        self.decode_counting = 0
+        
     def _initialize_kv_caches(self) -> None:
         """Initialize the KV cache in the worker(s).
 
@@ -1408,7 +1409,10 @@ class LLMEngine:
 
             ctx.seq_group_metadata_list = seq_group_metadata_list
             ctx.scheduler_outputs = scheduler_outputs
-
+            if scheduler_outputs.scheduled_seq_groups[0].seq_group.first_seq.data.stage.name == 'DECODE':
+                self.decode_counting += 1
+                if self.decode_counting > 10:
+                    return None
             # Maybe switch from async mode to sync mode
             if not allow_async_output_proc and len(ctx.output_queue) > 0:
                 self._process_model_outputs(ctx=ctx)
