@@ -53,7 +53,7 @@ def create_test_prompts(
             "[user] Write a SQL query to answer the question based on the table schema.\n\n context: CREATE TABLE table_name_74 (icao VARCHAR, airport VARCHAR)\n\n question: Name the ICAO for lilongwe airport [/user] [assistant]",  # noqa: E501
             SamplingParams(temperature=0.0,
                            logprobs=1,
-                           prompt_logprobs=1,
+                           #prompt_logprobs=1,
                            max_tokens=128,
                            stop_token_ids=[32003]),
             #None
@@ -70,6 +70,7 @@ def create_dummy_test_prompts(
     
     embedded_prompt_len = prompt_len - 1
     prompt = "Hi" + (embedded_prompt_len - 1) * " Hi"
+    #prompt = "The quick brown fox"
     sample_parms = SamplingParams(temperature=0.0,
                            logprobs=1,
                            prompt_logprobs=1,
@@ -115,18 +116,18 @@ def process_requests(engine: LLMEngine,
         torch.cuda.nvtx.range_pop()
         if request_outputs == None:
             return
-        loop += 1
-        print(loop)
-        # step += 1
-        # print(f"Step {step}")
-        # if step > 10:
-        #     print(f"Exited :: ======================================")
-        #     break
+        #loop += 1
+        #print(loop)
+        step += 1
+        print(f"Step {step}")
+        if step > 10:
+            print(f"Exited :: ======================================")
+            break
         
         for i, request_output in enumerate(request_outputs):
             if request_output.finished:
                 print(f"Finished {i}:: ======================================")
-                #print(request_output)
+                print(request_output)
         
 
 def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
@@ -141,18 +142,18 @@ def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
     enable_lora=True
     # if enable_lora == True:
     #     StreamPoolManager.instance()
-    engine_args = EngineArgs(#model="meta-llama/Llama-2-7b-hf",
-                             model="meta-llama/Llama-3.1-8B",
+    engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
+                             #model="meta-llama/Llama-3.1-8B",
                              enable_lora=enable_lora,
                              max_loras=2,
                              max_lora_rank=8,
                              max_cpu_loras=2,
                              max_num_seqs=batch_size,
                              max_model_len=prompt_len + 10,
-                             max_num_batched_tokens=batch_size * prompt_len,
+                             max_num_batched_tokens=batch_size * (prompt_len + 10),
                              gpu_memory_utilization=0.65,
                              enable_chunked_prefill=False,
-                             #enforce_eager=True
+                             enforce_eager=True
     )
     return LLMEngine.from_engine_args(engine_args)
 
@@ -169,12 +170,12 @@ def main():
     # time.sleep(60)
     
     #lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
-    lora_path = snapshot_download(repo_id="RikiyaT/Meta-Llama-3.1-8B-LoRA-test")
+    #lora_path = snapshot_download(repo_id="RikiyaT/Meta-Llama-3.1-8B-LoRA-test")
     #test_prompts = create_test_prompts(lora_path)
     
 
-    #test_prompts = create_dummy_test_prompts(batch_size, "")
-    test_prompts = create_dummy_test_prompts(batch_size, prompt_len, lora_path)
+    test_prompts = create_dummy_test_prompts(batch_size, prompt_len, "")
+    #test_prompts = create_dummy_test_prompts(batch_size, prompt_len, lora_path)
     
     process_requests(engine, test_prompts)
     print(batch_size)
