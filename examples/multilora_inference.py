@@ -65,6 +65,7 @@ def create_dummy_test_prompts(
     number_of_requests : int,
     prompt_len : int,
     lora_path: str,
+    using_lora_num: Optional[int],
 ) -> List[Tuple[str, SamplingParams, Optional[LoRARequest]]]:
     requests = []
     
@@ -79,8 +80,7 @@ def create_dummy_test_prompts(
     
     if lora_path == "":
         using_loras = [None] * number_of_requests
-    else:   
-        using_lora_num = 1 # number_of_requests
+    else:
         lora_per_used = (number_of_requests / using_lora_num)
         
         using_lora_ids = [int(i / lora_per_used) for i in range(number_of_requests)]
@@ -145,9 +145,9 @@ def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
     engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
                              #model="meta-llama/Llama-3.1-8B",
                              enable_lora=enable_lora,
-                             max_loras=2,
+                             max_loras=32,
                              max_lora_rank=8,
-                             max_cpu_loras=2,
+                             max_cpu_loras=64,
                              max_num_seqs=batch_size,
                              max_model_len=prompt_len + 10,
                              max_num_batched_tokens=batch_size * (prompt_len + 10),
@@ -160,7 +160,7 @@ def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
 
 def main():
     """Main function that sets up and runs the prompt processing."""
-    batch_size = 32
+    batch_size = 4
     prompt_len = 128
 
     #torch.cuda.nvtx.range_push("Initializing engine")
@@ -169,13 +169,13 @@ def main():
     # print("\nSleeping...")
     # time.sleep(60)
     
-    #lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
+    lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
     #lora_path = snapshot_download(repo_id="RikiyaT/Meta-Llama-3.1-8B-LoRA-test")
     #test_prompts = create_test_prompts(lora_path)
     
 
-    test_prompts = create_dummy_test_prompts(batch_size, prompt_len, "")
-    #test_prompts = create_dummy_test_prompts(batch_size, prompt_len, lora_path)
+    #test_prompts = create_dummy_test_prompts(batch_size, prompt_len, "")
+    test_prompts = create_dummy_test_prompts(batch_size, prompt_len, lora_path, batch_size)
     
     process_requests(engine, test_prompts)
     print(batch_size)
