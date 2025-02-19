@@ -141,10 +141,35 @@ def _bgmv_shrink(
     )
     return
 
+@torch.inference_mode()
+def _bgmv_shrink_without_punica(
+    inputs: torch.Tensor,
+    lora_a_weights: torch.Tensor,
+    output_tensor: torch.Tensor,
+    lora_indices_tensor: torch.Tensor,
+    scaling: float = 1.0,
+) -> None:
+
+    if lora_a_weights.ndim == 4:  # shape:(lora_num,1,rank, size)
+        assert lora_a_weights.size(1) == 1
+        lora_a_weights = lora_a_weights.squeeze(dim=1)
+
+    for i in range(inputs.shape[0]):
+        lora = lora_a_weights[lora_indices_tensor.narrow(0, i, 1)]
+        lora = lora.squeeze(0).transpose(0, 1)
+        output_tensor[i] = torch.matmul(inputs[i], lora)
+            
+    return
+
 
 try:
     bgmv_shrink = torch.library.custom_op("lora::bgmv_shrink",
                                           _bgmv_shrink,
                                           mutates_args=["output_tensor"])
+    
+    bgmv_shrink_without_punica = torch.library.custom_op("lora::bgmv_shrink_without_punica",
+                                          _bgmv_shrink_without_punica,
+                                          mutates_args=["output_tensor"])
 except AttributeError:
     bgmv_shrink = _bgmv_shrink
+    bgmv_shrink_without_punica = _bgmv_shrink_without_punica

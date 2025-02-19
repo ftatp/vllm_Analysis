@@ -173,9 +173,38 @@ def _bgmv_expand_slice(
     return
 
 
+@torch.inference_mode()
+def bgmv_expand_slice_without_punica(
+    inputs: torch.Tensor,
+    lora_b_weights: torch.Tensor,
+    output_tensor: torch.Tensor,
+    lora_indices_tensor: torch.Tensor,
+    slice_offset: int,
+    slice_size: int,
+    add_inputs: bool = True,
+) -> None:
+    
+    if lora_b_weights.ndim == 4:  # shape:(lora_num,1,size,rank)
+        assert lora_b_weights.size(1) == 1
+        lora_b_weights = lora_b_weights.squeeze(dim=1)
+        
+    for i in range(inputs.shape[0]):
+        lora = lora_b_weights[lora_indices_tensor.narrow(0, i, 1)]
+        lora = lora.squeeze(0).transpose(0, 1)
+        expand_result = torch.matmul(inputs[i].to(torch.float16), lora)
+
+        output_tensor[i, slice_offset:slice_offset + slice_size] += expand_result
+    
+
 try:
     bgmv_expand_slice = torch.library.custom_op("lora::bgmv_expand_slice",
                                                 _bgmv_expand_slice,
                                                 mutates_args=["output_tensor"])
+    
+    bgmv_expand_slice_without_punica = torch.library.custom_op("lora::bgmv_expand_slice_without_punica",
+                                                bgmv_expand_slice_without_punica,
+                                                mutates_args=["output_tensor"])
+    
 except AttributeError:
     bgmv_expand_slice = _bgmv_expand_slice
+    bgmv_expand_slice_without_punica = bgmv_expand_slice_without_punica

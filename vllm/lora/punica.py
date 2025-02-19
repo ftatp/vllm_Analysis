@@ -14,7 +14,9 @@ from vllm.triton_utils import HAS_TRITON
 if HAS_TRITON:
     from vllm.lora.ops.bgmv_expand import bgmv_expand
     from vllm.lora.ops.bgmv_expand_slice import bgmv_expand_slice
+    from vllm.lora.ops.bgmv_expand_slice import bgmv_expand_slice_without_punica
     from vllm.lora.ops.bgmv_shrink import bgmv_shrink
+    from vllm.lora.ops.bgmv_shrink import bgmv_shrink_without_punica
     from vllm.lora.ops.sgmv_expand import sgmv_expand
     from vllm.lora.ops.sgmv_expand_slice import sgmv_expand_slice
     from vllm.lora.ops.sgmv_shrink import sgmv_shrink
@@ -391,7 +393,10 @@ class PunicaWrapper:
         scale: float,
     ):
         torch.cuda.nvtx.range_push("decode shrink lora")
-        bgmv_shrink(x, w_t_all, y, self.token_lora_indices, scale)
+        # bgmv_shrink(x, w_t_all, y, self.token_lora_indices, scale)
+        # y_test = torch.zeros_like(y)
+        
+        bgmv_shrink_without_punica(x, w_t_all, y, self.token_lora_indices, scale)
         torch.cuda.nvtx.range_pop()
 
     def expand_prefill(
@@ -461,7 +466,11 @@ class PunicaWrapper:
         add_input: bool,
     ):
         torch.cuda.nvtx.range_push("decode expand lora")
-        bgmv_expand_slice(x, w_t_all, y, self.token_lora_indices, y_offset,
+        # y_test = y.clone()
+        # bgmv_expand_slice(x, w_t_all, y, self.token_lora_indices, y_offset,
+        #                   y_slice_size, add_input)
+        
+        bgmv_expand_slice_without_punica(x, w_t_all, y, self.token_lora_indices, y_offset,
                           y_slice_size, add_input)
         torch.cuda.nvtx.range_pop()
 
