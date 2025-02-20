@@ -186,7 +186,8 @@ class PunicaWrapper:
     """
 
     def __init__(self, max_num_batched_tokens: int, max_batches: int,
-                 device: Union[torch.device, str]):
+                 device: Union[torch.device, str],
+                 use_punica : bool):
         self._token_lora_indices = torch.empty(max_num_batched_tokens,
                                                dtype=torch.long,
                                                device=device)
@@ -224,6 +225,7 @@ class PunicaWrapper:
         self.batch_size: int = -1
         self.is_prefill = False
         self.no_lora = False
+        self.use_punica = use_punica
 
     def update_metadata(
         self,
@@ -393,10 +395,11 @@ class PunicaWrapper:
         scale: float,
     ):
         torch.cuda.nvtx.range_push("decode shrink lora")
-        # bgmv_shrink(x, w_t_all, y, self.token_lora_indices, scale)
-        # y_test = torch.zeros_like(y)
         
-        bgmv_shrink_without_punica(x, w_t_all, y, self.token_lora_indices, scale)
+        if self.use_punica:
+            bgmv_shrink(x, w_t_all, y, self.token_lora_indices, scale)
+        else:
+            bgmv_shrink_without_punica(x, w_t_all, y, self.token_lora_indices, scale)
         torch.cuda.nvtx.range_pop()
 
     def expand_prefill(
@@ -466,12 +469,12 @@ class PunicaWrapper:
         add_input: bool,
     ):
         torch.cuda.nvtx.range_push("decode expand lora")
-        # y_test = y.clone()
-        # bgmv_expand_slice(x, w_t_all, y, self.token_lora_indices, y_offset,
-        #                   y_slice_size, add_input)
-        
-        bgmv_expand_slice_without_punica(x, w_t_all, y, self.token_lora_indices, y_offset,
-                          y_slice_size, add_input)
+        if self.use_punica:
+            bgmv_expand_slice(x, w_t_all, y, self.token_lora_indices, y_offset,
+                            y_slice_size, add_input)
+        else:
+            bgmv_expand_slice_without_punica(x, w_t_all, y, self.token_lora_indices, y_offset,
+                              y_slice_size, add_input)
         torch.cuda.nvtx.range_pop()
 
     def add_shrink(

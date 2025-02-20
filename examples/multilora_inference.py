@@ -74,7 +74,7 @@ def create_dummy_test_prompts(
     #prompt = "The quick brown fox"
     sample_parms = SamplingParams(temperature=0.0,
                            logprobs=1,
-                           #prompt_logprobs=None,
+                           #prompt_logprobs=1,
                            max_tokens=128,
                            stop_token_ids=[32003])
     
@@ -145,6 +145,7 @@ def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
     engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
                              #model="meta-llama/Llama-3.1-8B",
                              enable_lora=enable_lora,
+                             use_punica=True,
                              max_loras=32,
                              max_lora_rank=8,
                              max_cpu_loras=64,
@@ -160,7 +161,7 @@ def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
 
 def main():
     """Main function that sets up and runs the prompt processing."""
-    batch_size = 32
+    batch_size = 4
     prompt_len = 128
 
     #torch.cuda.nvtx.range_push("Initializing engine")

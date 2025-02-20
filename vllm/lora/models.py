@@ -333,7 +333,8 @@ class LoRAModelManager(AdapterModelManager):
         self.long_lora_context: Optional[LongContextLoRAContext] = None
         self.punica_wrapper = PunicaWrapper(max_num_batched_tokens,
                                             max_batches=self.max_num_seqs,
-                                            device=self.device)
+                                            device=self.device,
+                                            use_punica=self.lora_config.use_punica)
         # Scaling factor -> offset to the sin_cos_cache to it.
         # Used for long context lora.
         self.scaling_factor_to_offset: Dict[float, int] = {}

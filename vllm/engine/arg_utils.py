@@ -141,7 +141,8 @@ class EngineArgs:
     tokenizer_pool_extra_config: Optional[Dict[str, Any]] = None
     limit_mm_per_prompt: Optional[Mapping[str, int]] = None
     mm_processor_kwargs: Optional[Dict[str, Any]] = None
-    enable_lora: bool = False
+    enable_lora: bool = False,
+    use_punica : Optional[bool] = True
     enable_lora_bias: bool = False
     max_loras: int = 1
     max_lora_rank: int = 16
@@ -934,7 +935,7 @@ class EngineArgs:
         # gguf file needs a specific model loader and doesn't use hf_repo
         if check_gguf_file(self.model):
             self.quantization = self.load_format = "gguf"
-
+        
         # bitsandbytes quantization needs a specific model loader
         # so we make sure the quant method and the load format are consistent
         if (self.quantization == "bitsandbytes" or
@@ -1097,6 +1098,7 @@ class EngineArgs:
                              and parallel_config.use_ray),
             policy=self.scheduling_policy)
         lora_config = LoRAConfig(
+            use_punica=self.use_punica,
             bias_enabled=self.enable_lora_bias,
             max_lora_rank=self.max_lora_rank,
             max_loras=self.max_loras,
