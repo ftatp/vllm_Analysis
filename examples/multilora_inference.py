@@ -142,10 +142,10 @@ def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
     enable_lora=True
     # if enable_lora == True:
     #     StreamPoolManager.instance()
-    engine_args = EngineArgs(model="meta-llama/Llama-2-7b-hf",
-                             #model="meta-llama/Llama-3.1-8B",
+    engine_args = EngineArgs(#model="meta-llama/Llama-2-7b-hf",
+                             model="meta-llama/Llama-3.1-8B",
                              enable_lora=enable_lora,
-                             use_punica=True,
+                             use_punica=False,
                              max_loras=32,
                              max_lora_rank=8,
                              max_cpu_loras=64,
@@ -161,7 +161,7 @@ def initialize_engine(batch_size : int, prompt_len : int) -> LLMEngine:
 
 def main():
     """Main function that sets up and runs the prompt processing."""
-    batch_size = 4
+    batch_size = 512
     prompt_len = 128
 
     #torch.cuda.nvtx.range_push("Initializing engine")
@@ -170,8 +170,8 @@ def main():
     # print("\nSleeping...")
     # time.sleep(60)
     
-    lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
-    #lora_path = snapshot_download(repo_id="RikiyaT/Meta-Llama-3.1-8B-LoRA-test")
+    #lora_path = snapshot_download(repo_id="yard1/llama-2-7b-sql-lora-test")
+    lora_path = snapshot_download(repo_id="RikiyaT/Meta-Llama-3.1-8B-LoRA-test")
     #test_prompts = create_test_prompts(lora_path)
     
 

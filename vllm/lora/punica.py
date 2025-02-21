@@ -394,14 +394,13 @@ class PunicaWrapper:
         w_t_all: torch.Tensor,
         scale: float,
     ):
-        torch.cuda.nvtx.range_push("decode shrink lora")
-        
         if self.use_punica:
+            torch.cuda.nvtx.range_push("decode shrink lora")
             bgmv_shrink(x, w_t_all, y, self.token_lora_indices, scale)
+            torch.cuda.nvtx.range_pop()
         else:
             bgmv_shrink_without_punica(x, w_t_all, y, self.token_lora_indices, scale)
-        torch.cuda.nvtx.range_pop()
-
+            
     def expand_prefill(
         self,
         y: torch.Tensor,
@@ -468,15 +467,15 @@ class PunicaWrapper:
         y_slice_size: Optional[int],
         add_input: bool,
     ):
-        torch.cuda.nvtx.range_push("decode expand lora")
         if self.use_punica:
+            torch.cuda.nvtx.range_push("decode expand lora")
             bgmv_expand_slice(x, w_t_all, y, self.token_lora_indices, y_offset,
                             y_slice_size, add_input)
+            torch.cuda.nvtx.range_pop()
         else:
             bgmv_expand_slice_without_punica(x, w_t_all, y, self.token_lora_indices, y_offset,
                               y_slice_size, add_input)
-        torch.cuda.nvtx.range_pop()
-
+            
     def add_shrink(
         self,
         y: torch.Tensor,

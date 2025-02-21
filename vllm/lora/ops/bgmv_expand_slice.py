@@ -183,17 +183,18 @@ def bgmv_expand_slice_without_punica(
     slice_size: int,
     add_inputs: bool = True,
 ) -> None:
-    
     if lora_b_weights.ndim == 4:  # shape:(lora_num,1,size,rank)
         assert lora_b_weights.size(1) == 1
-        lora_b_weights = lora_b_weights.squeeze(dim=1)
-        
-    for i in range(inputs.shape[0]):
-        lora = lora_b_weights[lora_indices_tensor.narrow(0, i, 1)]
-        lora = lora.squeeze(0).transpose(0, 1)
-        expand_result = torch.matmul(inputs[i].to(torch.float16), lora)
-
-        output_tensor[i, slice_offset:slice_offset + slice_size] += expand_result
+        torch.cuda.nvtx.range_push("squeeze")
+        lora_b_weights = lora_b_weights[:, 0]
+        torch.cuda.nvtx.range_pop()
+    
+    torch.cuda.nvtx.range_push("select")
+    lora_selected = lora_b_weights[lora_indices_tensor].transpose(-2, -1)
+    torch.cuda.nvtx.range_pop()
+    torch.cuda.nvtx.range_push("bmm")
+    output_tensor[:, slice_offset:slice_offset + slice_size].add_(torch.bmm(inputs.to(torch.bfloat16).unsqueeze(1), lora_selected).squeeze(1))
+    torch.cuda.nvtx.range_pop()
     
 
 try:
