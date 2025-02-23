@@ -1409,7 +1409,8 @@ class LLMEngine:
 
             ctx.seq_group_metadata_list = seq_group_metadata_list
             ctx.scheduler_outputs = scheduler_outputs
-            if scheduler_outputs.scheduled_seq_groups[0].seq_group.first_seq.data.stage.name == 'DECODE':
+            if len(scheduler_outputs.scheduled_seq_groups) > 0 and scheduler_outputs.scheduled_seq_groups[0].seq_group.first_seq.data.stage.name == 'DECODE':
+                print("decode")
                 self.decode_counting += 1
                 if self.decode_counting > 10:
                     return None
