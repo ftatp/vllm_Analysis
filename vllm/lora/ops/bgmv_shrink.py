@@ -161,6 +161,17 @@ def _bgmv_shrink_without_punica(
     torch.cuda.nvtx.range_push("bmm")
     output_tensor.copy_(torch.bmm(inputs.unsqueeze(1), lora_selected).squeeze(1))
     torch.cuda.nvtx.range_pop()
+    
+    # if lora_a_weights.ndim == 4:  # shape:(lora_num,1,rank, size)
+    #     assert lora_a_weights.size(1) == 1
+    #     torch.cuda.nvtx.range_push("squeeze")
+    #     lora_a_weights = lora_a_weights.squeeze(dim=1)
+    #     torch.cuda.nvtx.range_pop()
+
+    # for i in range(inputs.shape[0]):
+    #     #torch.cuda.nvtx.range_push("matmul")
+    #     output_tensor[i] = torch.nn.functional.linear(inputs[i], lora_a_weights[lora_indices_tensor][i])
+    #     #torch.cuda.nvtx.range_pop()
             
     return
 
